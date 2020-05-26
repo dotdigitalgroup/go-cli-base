@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -31,13 +32,19 @@ func SetupBase(c []cli.Command) []cli.Command {
 				fmt.Println("No docker images found")
 				return
 			}
-			commandStop := exec.Command("docker", "stop")
-			commandStop.Run()
-			commandRmv := exec.Command("docker", "rm", out.String())
-			outputRmv, erroRmv := commandRmv.CombinedOutput()
-			if erroRmv != nil {
-				fmt.Println(fmt.Sprint(erroRmv) + ": " + string(outputRmv))
-				return
+			containers := strings.Split(out.String(), "\n")
+			for cont := range containers {
+				if len(containers[cont]) == 0 {
+					continue
+				}
+				commandStop := exec.Command("docker", "stop", containers[cont])
+				commandStop.Run()
+				commandRmv := exec.Command("docker", "rm", containers[cont])
+				outputRmv, erroRmv := commandRmv.CombinedOutput()
+				if erroRmv != nil {
+					fmt.Println(fmt.Sprint(erroRmv) + ": " + string(outputRmv))
+					return
+				}
 			}
 			commandPrune := exec.Command("docker", "network", "prune")
 			outputPrune, erroPrune := commandPrune.CombinedOutput()
@@ -46,7 +53,6 @@ func SetupBase(c []cli.Command) []cli.Command {
 				return
 			}
 			fmt.Println("Docker is now clean")
-
 		},
 	})
 
