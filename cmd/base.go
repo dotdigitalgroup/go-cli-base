@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 
@@ -22,10 +23,26 @@ func SetupBase(c []cli.Command) []cli.Command {
 		Category: "Docker",
 		Usage:    "Cleans docker enviroment",
 		Action: func(c *cli.Context) {
-			command := exec.Command("docker", "stop $(docker ps -aq) && docker rm $(docker ps -qa) && docker network prune -f")
-			output, erro := command.CombinedOutput()
-			if erro != nil {
-				fmt.Println(fmt.Sprint(erro) + ": " + string(output))
+			cmdContainers := exec.Command("docker", "ps", "-q", "--no-trunc")
+			var out bytes.Buffer
+			cmdContainers.Stdout = &out
+			errContainer := cmdContainers.Run()
+			if errContainer != nil {
+				fmt.Println("No docker images found")
+				return
+			}
+			commandStop := exec.Command("docker", "stop")
+			commandStop.Run()
+			commandRmv := exec.Command("docker", "rm", out.String())
+			outputRmv, erroRmv := commandRmv.CombinedOutput()
+			if erroRmv != nil {
+				fmt.Println(fmt.Sprint(erroRmv) + ": " + string(outputRmv))
+				return
+			}
+			commandPrune := exec.Command("docker", "network", "prune")
+			outputPrune, erroPrune := commandPrune.CombinedOutput()
+			if erroPrune != nil {
+				fmt.Println(fmt.Sprint(erroPrune) + ": " + string(outputPrune))
 				return
 			}
 			fmt.Println("Docker is now clean")
